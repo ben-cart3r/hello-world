@@ -6,23 +6,57 @@ on:
       - main
 
 jobs:
-  build:
+  lint:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Use Node.js 14.x
+        uses: action/setup-node@v1
+        with:
+          node-version: 14.x
+
+      - name: Install dependencies
+        run: npm clean-install
+
+      - name: Eslint
+        run: npm run lint
+
+      - name: Prettier
+        run: npm run prettier
+
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Use Node.js 14.x
+        uses: action/setup-node@v1
+        with:
+          node-version: 14.x
+
+      - name: Install dependencies
+        run: npm clean-install
+
+      - name: Run unit tests
+        run: npm run test
+
+  build:
+    needs: [lint, test]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
       - name: Use Node.js 14.x
         uses: actions/setup-node@v1
         with:
             node-version: 14.x
-      - name: Install dependencies
-        run: npm clean-install
-      - name: Static analysis
-        run: npm run lint
-      - name: Check format files
-        run: npm run prettier
-      - name: Run unit tests
-        run: npm run test
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -42,8 +76,5 @@ jobs:
           ECR_REPOSITORY: hello-world
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          # Build a docker container and
-          # push it to ECR so that it can
-          # be deployed to ECS.
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
